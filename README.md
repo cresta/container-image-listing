@@ -1,2 +1,2 @@
-# docker-utils
-Utils library for doing various things with Docker
+# container-image-listing
+Library for listing difference attributes of images.
