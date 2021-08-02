@@ -6,34 +6,20 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/pkg/errors"
 )
 
-// TODO move this to a common file?
-type ContainerClient interface {
-	//Auth()
-	ListTags()
-}
+const GHCRBaseUrl = "ghcr.io"
 
-type DockerClient struct {
+type GHCRClient struct {
 	ContainerClient interface{}
 }
 
-// Auth - Get/store a bearer token
-/*
-func (d *DockerClient) Auth() {
-	// TODO keep this?
-}*/
-
 // parseBearerResponse - Parses bearer token from auth response
-func (d *DockerClient) parseBearerResponse(body io.ReadCloser) (string, error) {
+func (c *GHCRClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	type authResponse struct {
 		Token       string    `json:"token"`
-		AccessToken string    `json:"access_token"`
-		ExpiresIn   int       `json:"expires_in"`
-		IssuedAt    time.Time `json:"issued_at"`
 	}
 
 	ar := authResponse{}
@@ -51,14 +37,14 @@ func (d *DockerClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	return ar.Token, nil
 }
 
-func (d *DockerClient) getBearerForRepo(name string) (string, error) {
-	req, err := http.NewRequest("GET", "https://auth.docker.io/token", nil)
+func (c *GHCRClient) getBearerForRepo(name string) (string, error) {
+	url := fmt.Sprintf("https://%s/token", GHCRBaseUrl)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return "", err
 	}
 
 	q := req.URL.Query()
-	q.Add("service", "registry.docker.io")
 	q.Add("scope", fmt.Sprintf("repository:%s:pull", name))
 	req.URL.RawQuery = q.Encode()
 
@@ -69,7 +55,7 @@ func (d *DockerClient) getBearerForRepo(name string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	token, err := d.parseBearerResponse(resp.Body)
+	token, err := c.parseBearerResponse(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -79,15 +65,15 @@ func (d *DockerClient) getBearerForRepo(name string) (string, error) {
 
 // ListTags - Return tags for name in no particular order
 // IE, name="library/redis"
-func (d *DockerClient) ListTags(name string) ([]string, error) {
+func (c *GHCRClient) ListTags(name string) ([]string, error) {
 	// Get auth token
-	token, err := d.getBearerForRepo(name)
+	token, err := c.getBearerForRepo(name)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create URL
-	url := fmt.Sprintf("https://registry-1.docker.io/v2/%s/tags/list", name)
+	url := fmt.Sprintf("https://%s/v2/%s/tags/list", GHCRBaseUrl, name)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -124,6 +110,8 @@ func (d *DockerClient) ListTags(name string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	log.Printf("BodyBytes: %s", bodyBytes)
 
 	err = json.Unmarshal(bodyBytes, &tlr)
 	if err != nil {
