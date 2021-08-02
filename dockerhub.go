@@ -13,19 +13,12 @@ import (
 
 // TODO move this to a common file?
 type ContainerClient interface {
-	//Auth()
 	ListTags()
 }
 
 type DockerClient struct {
 	ContainerClient interface{}
 }
-
-// Auth - Get/store a bearer token
-/*
-func (d *DockerClient) Auth() {
-	// TODO keep this?
-}*/
 
 // parseBearerResponse - Parses bearer token from auth response
 func (d *DockerClient) parseBearerResponse(body io.ReadCloser) (string, error) {
