@@ -13,5 +13,5 @@ func TestQuayClient_ListTags(t *testing.T) {
 	quayClient := containerimagelisting.QuayClient{}
 	tags, err := quayClient.ListTags("bedrock/ubuntu")
 	assert.NoError(t, err)
-	assert.Contains(t, tags, "saucy")
+	assert.True(t, containsTag("saucy", tags))
 }

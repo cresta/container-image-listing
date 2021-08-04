@@ -11,17 +11,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO move this to a common file?
-type ContainerClient interface {
-	ListTags()
-}
+// TODO Create ContainerClient factory method, IE NewContainerClient...etc
+// Should be able to figure out correct client DockerHub/GHCR/ECR based on url
+// TODO wrap errors from external librarys
 
-type DockerClient struct {
-	ContainerClient interface{}
-}
+type DockerHubClient struct{}
+
+var _ ContainerClient = &DockerHubClient{}
 
 // parseBearerResponse - Parses bearer token from auth response
-func (d *DockerClient) parseBearerResponse(body io.ReadCloser) (string, error) {
+func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	type authResponse struct {
 		Token       string    `json:"token"`
 		AccessToken string    `json:"access_token"`
@@ -44,7 +43,7 @@ func (d *DockerClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	return ar.Token, nil
 }
 
-func (d *DockerClient) getBearerForRepo(name string) (string, error) {
+func (d *DockerHubClient) getBearerForRepo(name string) (string, error) {
 	req, err := http.NewRequest("GET", "https://auth.docker.io/token", nil)
 	if err != nil {
 		return "", err
@@ -72,7 +71,7 @@ func (d *DockerClient) getBearerForRepo(name string) (string, error) {
 
 // ListTags - Return tags for name in no particular order
 // IE, name="library/redis"
-func (d *DockerClient) ListTags(name string) ([]string, error) {
+func (d *DockerHubClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
 	// Get auth token
 	token, err := d.getBearerForRepo(name)
 	if err != nil {
@@ -123,6 +122,8 @@ func (d *DockerClient) ListTags(name string) ([]string, error) {
 		return nil, err
 	}
 
+	// Convert tag string names to Tag structs
+	tags := stringNamesToTags(tlr.Tags)
 
-	return tlr.Tags, nil
+	return tags, nil
 }

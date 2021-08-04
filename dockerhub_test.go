@@ -10,12 +10,12 @@ import (
 func TestDockerClient_ListTags(t *testing.T) {
 	t.Parallel()
 
-	dockerClient := containerimagelisting.DockerClient{}
+	dockerClient := containerimagelisting.DockerHubClient{}
 
 	tags, err := dockerClient.ListTags("library/redis")
 	assert.NoError(t, err)
 
-	t.Logf("Tags: %s", tags)
+	t.Logf("Tags: %+v", tags)
 
-	assert.Contains(t, tags, "latest", "Did not find tag 'latest'")
+	assert.True(t, containsTag("latest", tags))
 }

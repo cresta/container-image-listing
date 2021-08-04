@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type QuayClient struct {
-	ContainerClient interface{}
-}
+type QuayClient struct{}
+
+var _ ContainerClient = &QuayClient{}
 
 const QuayMaxPageSize = 100
 
@@ -35,7 +35,7 @@ type listTagsResult struct {
 	Tags          []Tag `json:"tags"`
 }
 
-func (c *QuayClient) parseListTagResult(body io.ReadCloser) (tags []Tag, additionalPages bool, err error){
+func (c *QuayClient) parseListTagResult(body io.ReadCloser) (tags []Tag, additionalPages bool, err error) {
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		return nil, false, err
@@ -117,17 +117,11 @@ func (c *QuayClient) listTagsPaging(name string, page int) ([]Tag, error) {
 // For Quay some repositories that are public return a 401 unauthorized.
 // For example bedrock/ubuntu works fine however
 // prometheus/node-exporter gives a 401 unauthorized
-func (c *QuayClient) ListTags(name string) ([]string, error) {
+func (c *QuayClient) ListTags(name string) ([]Tag, error) {
 	tags, err := c.listTagsPaging(name, 0)
 	if err != nil {
 		return nil, err
 	}
 
-	var tagStrings []string
-	for _, tag := range tags {
-		tagStrings = append(tagStrings, tag.Name)
-	}
-
-
-	return tagStrings, nil
+	return tags, nil
 }
