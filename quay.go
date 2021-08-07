@@ -6,12 +6,13 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/httputil"
 
 	"github.com/pkg/errors"
 )
 
-type QuayClient struct{}
+type QuayClient struct {
+	Token string
+}
 
 var _ ContainerClient = &QuayClient{}
 
@@ -61,18 +62,17 @@ func (c *QuayClient) listTagsPaging(name string, page int) ([]Tag, error) {
 		return nil, err
 	}
 
+	// Added header if it exists
+	if c.Token != "" {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", c.Token))
+	}
+
+	// Add parameters
 	q := req.URL.Query()
 	q.Add("page", fmt.Sprintf("%d", page))
 	q.Add("onlyActiveTags", "true")
 	q.Add("limit", fmt.Sprintf("%d", QuayMaxPageSize))
 	req.URL.RawQuery = q.Encode()
-
-	// Dump request to logs // TODO keep?
-	reqDump, err := httputil.DumpRequest(req, false)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("QuayClient listTagsPaging reqDump: %s", reqDump)
 
 	// Perform request
 	client := http.DefaultClient

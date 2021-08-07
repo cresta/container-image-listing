@@ -19,7 +19,7 @@ type GHCRClient struct {
 // parseBearerResponse - Parses bearer token from auth response
 func (c *GHCRClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	type authResponse struct {
-		Token       string    `json:"token"`
+		Token string `json:"token"`
 	}
 
 	ar := authResponse{}
@@ -111,13 +111,13 @@ func (c *GHCRClient) ListTags(name string) ([]string, error) {
 		return nil, err
 	}
 
-	log.Printf("BodyBytes: %s", bodyBytes)
+	// TODO remove
+	//log.Printf("BodyBytes: %s", bodyBytes)
 
 	err = json.Unmarshal(bodyBytes, &tlr)
 	if err != nil {
 		return nil, err
 	}
-
 
 	return tlr.Tags, nil
 }
