@@ -17,6 +17,11 @@ func TestDockerClient_ListTags(t *testing.T) {
 
 	t.Logf("Tags: %+v", tags)
 
+	// Checking if we can handle a lot of tags without paging
+	// Docker Registry doesn't seem to require paging or we haven't found a repository
+	// with enough tags yet
+	assert.Greater(t, len(tags), 500)
+
 	assert.True(t, containsTag("latest", tags))
 }
 
