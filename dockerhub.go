@@ -15,7 +15,12 @@ import (
 // Should be able to figure out correct client DockerHub/GHCR/ECR based on url
 // TODO wrap errors from external librarys
 
-type DockerHubClient struct{}
+const DockerHubMaxPageSize = 10 // TODO temporarily setting this to 10 for testing
+
+type DockerHubClient struct {
+	Username string
+	Password string
+}
 
 var _ ContainerClient = &DockerHubClient{}
 
@@ -43,10 +48,14 @@ func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error
 	return ar.Token, nil
 }
 
-func (d *DockerHubClient) getBearerForRepo(name string) (string, error) {
+func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
 	req, err := http.NewRequest("GET", "https://auth.docker.io/token", nil)
 	if err != nil {
 		return "", err
+	}
+
+	if c.Username != "" {
+		req.SetBasicAuth(c.Username, c.Password)
 	}
 
 	q := req.URL.Query()
@@ -61,7 +70,7 @@ func (d *DockerHubClient) getBearerForRepo(name string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	token, err := d.parseBearerResponse(resp.Body)
+	token, err := c.parseBearerResponse(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -71,9 +80,13 @@ func (d *DockerHubClient) getBearerForRepo(name string) (string, error) {
 
 // ListTags - Return tags for name in no particular order
 // IE, name="library/redis"
-func (d *DockerHubClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
+func (c *DockerHubClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
+	return c.listTagsPage(name, 0)
+}
+
+func (c *DockerHubClient) listTagsPage(name string, page int) ([]Tag, error) {
 	// Get auth token
-	token, err := d.getBearerForRepo(name)
+	token, err := c.getBearerForRepo(name)
 	if err != nil {
 		return nil, err
 	}
