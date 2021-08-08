@@ -10,7 +10,8 @@ type Auth struct {
 	DockerHubUsername string
 	DockerHubPassword string
 	ECRToken          string // TODO fix this to make sense, this is a placeholder
-	GHCRToken         string // TODO confirm this makes sense, is a placeholder
+	GHCRUsername      string
+	GHCRPassword      string
 }
 
 type ContainerClient interface {
@@ -30,6 +31,12 @@ func (a *Auth) FromEnv() {
 	}
 	if value, exists := os.LookupEnv("DOCKERHUB_USERNAME"); exists {
 		a.DockerHubUsername = value
+	}
+	if value, exists := os.LookupEnv("GHCR_USERNAME"); exists {
+		a.GHCRUsername = value
+	}
+	if value, exists := os.LookupEnv("GHCR_PASSWORD"); exists {
+		a.GHCRPassword = value
 	}
 	// TODO finish this once everything is coded
 }

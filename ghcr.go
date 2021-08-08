@@ -13,8 +13,11 @@ import (
 const GHCRBaseUrl = "ghcr.io"
 
 type GHCRClient struct {
-	ContainerClient interface{}
+	Token   string // TODO not sure if this should be a token or user/pass
+	BaseURL string
 }
+
+var _ContainerClient = &GHCRClient{}
 
 // parseBearerResponse - Parses bearer token from auth response
 func (c *GHCRClient) parseBearerResponse(body io.ReadCloser) (string, error) {
