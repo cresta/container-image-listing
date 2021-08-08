@@ -30,13 +30,13 @@ type Tag struct {
 	Size           int    `json:"size"`
 }
 
-type listTagsResult struct {
-	HasAdditional bool  `json:"has_additional"`
-	Page          int   `json:"page"`
-	Tags          []Tag `json:"tags"`
-}
-
 func (c *QuayClient) parseListTagResult(body io.ReadCloser) (tags []Tag, additionalPages bool, err error) {
+	type listTagsResult struct {
+		HasAdditional bool  `json:"has_additional"`
+		Page          int   `json:"page"`
+		Tags          []Tag `json:"tags"`
+	}
+
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
 		return nil, false, err

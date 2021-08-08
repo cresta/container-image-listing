@@ -92,7 +92,7 @@ func (c *GHCRClient) ListTags(name string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		msg := fmt.Sprintf("status code was %d instead of 200 with status %s", resp.StatusCode, resp.Status)
 		log.Print(msg)
 		return nil, errors.New(msg)

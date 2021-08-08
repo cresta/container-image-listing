@@ -21,7 +21,9 @@ func TestQuayClient_ListTagsWithAuth(t *testing.T) {
 
 	auth := &containerimagelisting.Auth{}
 	auth.FromEnv()
-	assert.NotEmpty(t, auth.QuayBearerToken, "Make sure QUAY_TOKEN env variable is set for testing")
+	if !assert.NotEmpty(t, auth.QuayBearerToken, "Make sure QUAY_TOKEN env variable is set for testing") {
+		t.FailNow()
+	}
 	quayClient := containerimagelisting.QuayClient{Token: auth.QuayBearerToken}
 	tags, err := quayClient.ListTags("cresta/chatmon")
 	assert.NoError(t, err)

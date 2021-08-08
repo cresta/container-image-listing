@@ -6,10 +6,11 @@ import (
 )
 
 type Auth struct {
-	QuayBearerToken string
-	DockerHubToken  string // TODO is a placeholder
-	ECRToken        string // TODO fix this to make sense, this is a placeholder
-	GHCRToken       string // TODO confirm this makes sense, is a placeholder
+	QuayBearerToken   string
+	DockerHubUsername string
+	DockerHubPassword string
+	ECRToken          string // TODO fix this to make sense, this is a placeholder
+	GHCRToken         string // TODO confirm this makes sense, is a placeholder
 }
 
 type ContainerClient interface {
@@ -21,10 +22,16 @@ func (a *Auth) NewClient(url string) ContainerClient {
 }
 
 func (a *Auth) FromEnv() {
-	// TODO finish this once everything is coded
 	if value, exists := os.LookupEnv("QUAY_TOKEN"); exists {
 		a.QuayBearerToken = value
 	}
+	if value, exists := os.LookupEnv("DOCKERHUB_PASSWORD"); exists {
+		a.DockerHubPassword = value
+	}
+	if value, exists := os.LookupEnv("DOCKERHUB_USERNAME"); exists {
+		a.DockerHubUsername = value
+	}
+	// TODO finish this once everything is coded
 }
 
 // NewClientFromEnv - Creates a new ContainerClient checking
@@ -44,7 +51,8 @@ func NewClient(url string, auth *Auth) ContainerClient {
 	case strings.Contains(url, "quay.io"):
 		containerClient = &QuayClient{Token: auth.QuayBearerToken}
 	case strings.Contains(url, "docker.io"): // TODO confirm this
-		containerClient = &DockerHubClient{} // TODO add token in here
+		containerClient = &DockerHubClient{Username: auth.DockerHubUsername,
+			Password: auth.DockerHubPassword}
 		// TODO uncomment GHCR
 		//case strings.Contains(url, "github.com"):
 		//return &GHCRClient{}, nil
