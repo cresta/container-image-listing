@@ -31,7 +31,7 @@ func TestNewContainerClient(t *testing.T) {
 		{
 			name:         "dockerhub",
 			url:          "docker.io", // TODO add better url
-			wantedClient: &containerimagelisting.DockerHubClient{},
+			wantedClient: &containerimagelisting.DockerRegistryClient{},
 		},
 	}
 

@@ -18,17 +18,18 @@ import (
 
 const DockerHubMaxPageSize = 10 // TODO temporarily setting this to 10 for testing
 const DockerHubBaseUrl = "docker.io"
+const GHCRBaseUrl = "ghcr.io"
 
-type DockerHubClient struct {
+type DockerRegistryClient struct {
 	Username string
 	Password string
 	BaseURL  string
 }
 
-var _ ContainerClient = &DockerHubClient{}
+var _ ContainerClient = &DockerRegistryClient{}
 
 // parseBearerResponse - Parses bearer token from auth response
-func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error) {
+func (c *DockerRegistryClient) parseBearerResponse(body io.ReadCloser) (string, error) {
 	type authResponse struct {
 		Token       string    `json:"token"`
 		AccessToken string    `json:"access_token"`
@@ -51,11 +52,11 @@ func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error
 	return ar.Token, nil
 }
 
-func (c *DockerHubClient) isDockerHub() bool {
+func (c *DockerRegistryClient) isDockerHub() bool {
 	return strings.Contains(c.BaseURL, "docker.io")
 }
 
-func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
+func (c *DockerRegistryClient) getBearerForRepo(name string) (string, error) {
 	baseUrl := c.BaseURL
 	if c.isDockerHub() {
 		baseUrl = "auth.docker.io"
@@ -97,11 +98,11 @@ func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
 
 // ListTags - Return tags for name in no particular order
 // IE, name="library/redis"
-func (c *DockerHubClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
+func (c *DockerRegistryClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
 	return c.listTagsPage(name, 0)
 }
 
-func (c *DockerHubClient) listTagsPage(name string, page int) ([]Tag, error) {
+func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error) {
 	// Get auth token
 	token, err := c.getBearerForRepo(name)
 	if err != nil {
