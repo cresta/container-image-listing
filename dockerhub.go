@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -16,10 +17,12 @@ import (
 // TODO wrap errors from external librarys
 
 const DockerHubMaxPageSize = 10 // TODO temporarily setting this to 10 for testing
+const DockerHubBaseUrl = "docker.io"
 
 type DockerHubClient struct {
 	Username string
 	Password string
+	BaseURL  string
 }
 
 var _ ContainerClient = &DockerHubClient{}
@@ -49,7 +52,17 @@ func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error
 }
 
 func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
-	req, err := http.NewRequest("GET", "https://auth.docker.io/token", nil)
+	baseUrl := c.BaseURL
+	if strings.Contains(baseUrl, "docker.io") {
+		baseUrl = "auth.docker.io"
+	}
+	//baseUrl = "auth.docker.io"
+	if baseUrl == "" {
+		panic("was blank") // TODO remove this
+	}
+	req, err := http.NewRequest("GET",
+		fmt.Sprintf("https://%s/token", baseUrl),
+		nil)
 	if err != nil {
 		return "", err
 	}

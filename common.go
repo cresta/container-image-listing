@@ -51,8 +51,11 @@ func NewClient(url string, auth *Auth) ContainerClient {
 	case strings.Contains(url, "quay.io"):
 		containerClient = &QuayClient{Token: auth.QuayBearerToken}
 	case strings.Contains(url, "docker.io"): // TODO confirm this
-		containerClient = &DockerHubClient{Username: auth.DockerHubUsername,
-			Password: auth.DockerHubPassword}
+		containerClient = &DockerHubClient{
+			Username: auth.DockerHubUsername,
+			Password: auth.DockerHubPassword,
+			BaseURL:  DockerHubBaseUrl,
+		}
 		// TODO uncomment GHCR
 		//case strings.Contains(url, "github.com"):
 		//return &GHCRClient{}, nil

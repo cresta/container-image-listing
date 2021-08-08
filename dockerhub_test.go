@@ -7,10 +7,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDockerClient_ListTags(t *testing.T) {
+func TestDockerClient_ListTags_NoAuth(t *testing.T) {
 	t.Parallel()
 
-	dockerClient := containerimagelisting.DockerHubClient{}
+	auth := &containerimagelisting.Auth{}
+	dockerClient := containerimagelisting.NewClient("docker.io", auth)
 
 	tags, err := dockerClient.ListTags("library/redis")
 	assert.NoError(t, err)
@@ -26,7 +27,7 @@ func TestDockerClient_ListTags(t *testing.T) {
 	assert.True(t, containsTag("latest", tags))
 }
 
-func TestDockerClient_ListTagsWithAuth(t *testing.T) {
+func TestDockerClient_ListTags_WithAuth(t *testing.T) {
 	t.Parallel()
 
 	auth := &containerimagelisting.Auth{}
@@ -39,14 +40,11 @@ func TestDockerClient_ListTagsWithAuth(t *testing.T) {
 		t.FailNow()
 	}
 
-	dockerClient := containerimagelisting.DockerHubClient{Username: auth.DockerHubUsername,
-		Password: auth.DockerHubPassword}
+	dockerClient := containerimagelisting.NewClient("docker.io", auth)
 
 	// Test private repo with access token
 	tags, err := dockerClient.ListTags("crestaai/build-cache")
 	assert.NoError(t, err)
-
-	t.Logf("Tags: %+v", tags)
 
 	// Picked this tag because it is funny ;)
 	assert.True(t, containsTag("jacktest-f", tags))
