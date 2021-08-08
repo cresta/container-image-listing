@@ -51,15 +51,16 @@ func (d *DockerHubClient) parseBearerResponse(body io.ReadCloser) (string, error
 	return ar.Token, nil
 }
 
+func (c *DockerHubClient) isDockerHub() bool {
+	return strings.Contains(c.BaseURL, "docker.io")
+}
+
 func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
 	baseUrl := c.BaseURL
-	if strings.Contains(baseUrl, "docker.io") {
+	if c.isDockerHub() {
 		baseUrl = "auth.docker.io"
 	}
-	//baseUrl = "auth.docker.io"
-	if baseUrl == "" {
-		panic("was blank") // TODO remove this
-	}
+
 	req, err := http.NewRequest("GET",
 		fmt.Sprintf("https://%s/token", baseUrl),
 		nil)
@@ -72,7 +73,10 @@ func (c *DockerHubClient) getBearerForRepo(name string) (string, error) {
 	}
 
 	q := req.URL.Query()
-	q.Add("service", "registry.docker.io")
+
+	if c.isDockerHub() {
+		q.Add("service", "registry.docker.io")
+	}
 	q.Add("scope", fmt.Sprintf("repository:%s:pull", name))
 	req.URL.RawQuery = q.Encode()
 
@@ -105,7 +109,11 @@ func (c *DockerHubClient) listTagsPage(name string, page int) ([]Tag, error) {
 	}
 
 	// Create URL
-	url := fmt.Sprintf("https://registry-1.docker.io/v2/%s/tags/list", name)
+	baseUrl := c.BaseURL
+	if strings.Contains(baseUrl, "docker.io") {
+		baseUrl = "registry-1.docker.io"
+	}
+	url := fmt.Sprintf("https://%s/v2/%s/tags/list", baseUrl, name)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
