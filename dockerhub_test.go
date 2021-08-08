@@ -19,7 +19,8 @@ func TestDockerClient_ListTags(t *testing.T) {
 
 	// Checking if we can handle a lot of tags without paging
 	// Docker Registry doesn't seem to require paging or we haven't found a repository
-	// with enough tags yet
+	// with enough tags yet. It also seems that docker registry doesn't honor the paging
+	// parameters set forth in https://docs.docker.com/registry/spec/api/#listing-image-tags
 	assert.Greater(t, len(tags), 500)
 
 	assert.True(t, containsTag("latest", tags))
