@@ -17,11 +17,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO Create ContainerClient factory method, IE NewContainerClient...etc
-// Should be able to figure out correct client DockerHub/GHCR/ECR based on url
 // TODO wrap errors from external librarys
 
-const DockerHubMaxPageSize = 10 // TODO temporarily setting this to 10 for testing
 const DockerHubBaseURL = "docker.io"
 const GHCRBaseURL = "ghcr.io"
 const ECRBaseURL = "amazonaws.com"
@@ -34,8 +31,8 @@ type DockerRegistryClient struct {
 
 var _ ContainerClient = &DockerRegistryClient{}
 
-// parseBearerResponse - Parses bearer token from auth response
-func (c *DockerRegistryClient) parseBearerResponse(body io.ReadCloser) (string, error) {
+// parseBearerResponse - Parses bearer token from auth response.
+func (c *DockerRegistryClient) parseBearerResponse(body io.Reader) (string, error) {
 	type authResponse struct {
 		Token       string    `json:"token"`
 		AccessToken string    `json:"access_token"`
@@ -47,20 +44,24 @@ func (c *DockerRegistryClient) parseBearerResponse(body io.ReadCloser) (string, 
 
 	bodyBytes, err := io.ReadAll(body)
 	if err != nil {
+		err = errors.Wrap(err, "error reading auth token body")
+
 		return "", err
 	}
 
 	err = json.Unmarshal(bodyBytes, &ar)
 	if err != nil {
+		err = errors.Wrap(err, "error unmarshalling bearer token response")
+
 		return "", err
 	}
 
 	return ar.Token, nil
 }
 
-// isDockerHub - Helper function for quickly determining if something is docker.io
-// docker.io uses different base URLs depending on the operation
-// docker.io also requests specific headers in some instances
+// isDockerHub - Helper function for quickly determining if something is docker.io.
+// - docker.io uses different base URLs depending on the operation.
+// - docker.io also requests specific headers in some instances.
 func (c *DockerRegistryClient) isDockerHub() bool {
 	return strings.Contains(c.BaseURL, DockerHubBaseURL)
 }
@@ -74,6 +75,8 @@ func (c *DockerRegistryClient) getBearerECRSpecific() (token string, err error) 
 	config := aws.NewConfig().WithRegion("us-west-2").WithCredentials(creds)
 	sess, err := session.NewSession(config)
 	if err != nil {
+		err = errors.Wrap(err, "error creating new AWS session")
+
 		return "", err
 	}
 	svc := ecr.New(sess)
