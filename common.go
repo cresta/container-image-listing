@@ -7,6 +7,8 @@ import (
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Auth struct {
@@ -100,10 +102,10 @@ func NewClient(url string, auth *Auth) (ContainerClient, error) {
 			return nil, err
 		}
 		return containerClient, nil
-	case strings.Contains(url, "docker"): // Need to catch hub.docker.com and docker.io
-		return auth.NewDockerHubClient(), nil
 	case strings.Contains(url, GHCRBaseURL):
 		return auth.NewGHCRClient(), nil
+	case strings.Contains(url, DockerHubBaseURL) || strings.Contains(url, "docker.com"):
+		return auth.NewDockerHubClient(), nil
 	}
 
 	return nil, fmt.Errorf("No clients matched for url %s", url)
@@ -134,11 +136,9 @@ func urlToName(imageURL string) string {
 	imageURL = strings.TrimPrefix(imageURL, "repository/docker/")
 
 	return imageURL
-
 }
 
 // ListTags - Wrapper function to create a new client and list tags in one step.
-// TODO make a single function that gets a new client and grabs tags in one step?
 func ListTags(imageURL string) ([]Tag, error) {
 	client, err := NewClientFromEnv(imageURL)
 	if err != nil {
@@ -147,5 +147,12 @@ func ListTags(imageURL string) ([]Tag, error) {
 
 	name := urlToName(imageURL)
 
-	return client.ListTags(name)
+	tags, err := client.ListTags(name)
+	if err != nil {
+		err = errors.Wrapf(err, "unable to list tags for image url %s", imageURL)
+
+		return nil, err
+	}
+
+	return tags, nil
 }
