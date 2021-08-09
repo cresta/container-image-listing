@@ -2,11 +2,11 @@ package containerimagelisting
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"os"
+	"regexp"
 	"strings"
-
-	"github.com/pkg/errors"
 )
 
 type Auth struct {
@@ -106,7 +106,7 @@ func NewClient(url string, auth *Auth) (ContainerClient, error) {
 		return auth.NewGHCRClient(), nil
 	}
 
-	return nil, errors.New(fmt.Sprintf("No clients matched for url %s", url))
+	return nil, fmt.Errorf("No clients matched for url %s", url)
 }
 
 // stringNamesToTags - Converts a slice of strings to a slice of Tags.
@@ -119,13 +119,33 @@ func stringNamesToTags(names []string) []Tag {
 	return tags
 }
 
+func urlToName(imageURL string) string {
+	imageURL = strings.TrimPrefix(imageURL, "http://")
+	imageURL = strings.TrimPrefix(imageURL, "https://")
+
+	expr := "/.*$"
+	r, err := regexp.Compile(expr)
+	if err != nil {
+		log.Fatalf("Regex %s failed to compile", expr)
+	}
+	imageURL = r.FindString(imageURL)
+
+	imageURL = strings.TrimPrefix(imageURL, "/")
+	imageURL = strings.TrimPrefix(imageURL, "repository/docker/")
+
+	return imageURL
+
+}
+
 // ListTags - Wrapper function to create a new client and list tags in one step.
 // TODO make a single function that gets a new client and grabs tags in one step?
-func ListTags(url string) ([]Tag, error) {
-	client, err := NewClientFromEnv(url)
+func ListTags(imageURL string) ([]Tag, error) {
+	client, err := NewClientFromEnv(imageURL)
 	if err != nil {
 		return nil, err
 	}
-	client.ListTags("") // TODO still need to parse out the "name" from the url before this is usable
-	return nil, errors.New("code this")
+
+	name := urlToName(imageURL)
+
+	return client.ListTags(name)
 }

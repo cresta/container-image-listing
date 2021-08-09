@@ -17,8 +17,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO wrap errors from external librarys
-
 const DockerHubBaseURL = "docker.io"
 const GHCRBaseURL = "ghcr.io"
 const ECRBaseURL = "amazonaws.com"
