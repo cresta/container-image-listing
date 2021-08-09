@@ -88,33 +88,37 @@ func (c *DockerRegistryClient) getBearerECRSpecific() (token string, err error) 
 		if aerr, ok := err.(awserr.Error); ok {
 			switch aerr.Code() {
 			case ecr.ErrCodeServerException:
-				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+				log.Print(ecr.ErrCodeServerException, aerr.Error())
 			case ecr.ErrCodeInvalidParameterException:
-				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+				log.Print(ecr.ErrCodeInvalidParameterException, aerr.Error())
 			default:
-				fmt.Println(aerr.Error())
+				log.Print(aerr.Error())
 			}
 		} else {
 			// Print the error, cast err to awserr.Error to get the Code and
 			// Message from an error.
-			fmt.Println(err.Error())
+			log.Println(err.Error())
 		}
+
+		err = errors.Wrap(err, "error getting ECR authorization token")
+
 		return "", err
 	}
 
 	token = *result.AuthorizationData[0].AuthorizationToken
+
 	return token, nil
 }
 
-// getBearerForRepo - Obtains a bearer token for a specific repository
-// This is necessary because bearer tokens must be scoped for specific repositories
+// getBearerForRepo - Obtains a bearer token for a specific repository.
+// This is necessary because bearer tokens must be scoped for specific repositories.
 func (c *DockerRegistryClient) getBearerForRepo(name string) (token string, err error) {
 	baseUrl := c.BaseURL
 	if c.isDockerHub() {
 		baseUrl = "auth.docker.io"
 	}
 
-	req, err := http.NewRequest("GET",
+	req, err := http.NewRequest(http.MethodGet,
 		fmt.Sprintf("https://%s/token", baseUrl),
 		nil)
 	if err != nil {
@@ -136,6 +140,8 @@ func (c *DockerRegistryClient) getBearerForRepo(name string) (token string, err 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
+		err = errors.Wrap(err, "error requesting bearer token")
+
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -148,13 +154,9 @@ func (c *DockerRegistryClient) getBearerForRepo(name string) (token string, err 
 	return token, nil
 }
 
-// ListTags - Return tags for name in no particular order
+// ListTags - Return tags for name in no particular order.
 // IE, name="library/redis"
-func (c *DockerRegistryClient) ListTags(name string) ([]Tag, error) { // TODO have this return a struct of type Tag, use nil (or equivalent) for values we don't know yet
-	return c.listTagsPage(name, 0)
-}
-
-func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error) {
+func (c *DockerRegistryClient) ListTags(name string) ([]Tag, error) {
 	// Get auth token
 	var token string
 	var err error
@@ -168,13 +170,13 @@ func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error
 	}
 
 	// Create URL
-	baseUrl := c.BaseURL
-	if strings.Contains(baseUrl, "docker.io") {
-		baseUrl = "registry-1.docker.io"
+	baseURL := c.BaseURL
+	if strings.Contains(baseURL, "docker.io") {
+		baseURL = "registry-1.docker.io"
 	}
-	url := fmt.Sprintf("https://%s/v2/%s/tags/list", baseUrl, name)
+	url := fmt.Sprintf("https://%s/v2/%s/tags/list", baseURL, name)
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -191,13 +193,16 @@ func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {
+		err = errors.Wrap(err, "error performing request to list tags")
+
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		msg := fmt.Sprintf("status code was %d instead of 200 with status %s", resp.StatusCode, resp.Status)
 		log.Print(msg)
+
 		return nil, errors.New(msg)
 	}
 
@@ -211,11 +216,15 @@ func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		err = errors.Wrap(err, "error reading request body while listing tags")
+
 		return nil, err
 	}
 
 	err = json.Unmarshal(bodyBytes, &tlr)
 	if err != nil {
+		err = errors.Wrap(err, "unable to unmarshal tag list response")
+
 		return nil, err
 	}
 
