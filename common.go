@@ -15,8 +15,6 @@ type Auth struct {
 	DockerHubPassword string
 	GHCRUsername      string
 	GHCRPassword      string
-	ECRId             string
-	ECRSecret         string
 }
 
 type ContainerClient interface {
@@ -46,14 +44,16 @@ func (a *Auth) NewGHCRClient() ContainerClient {
 }
 
 func (a *Auth) NewECRClient(imageURL string) (ContainerClient, error) {
+	if !strings.Contains(imageURL, "http") {
+		imageURL = "https://" + imageURL
+	}
 	u, err := url.Parse(imageURL)
 	if err != nil {
 		return nil, err
 	}
+
 	return &DockerRegistryClient{
-		Username: a.ECRId,
-		Password: a.ECRSecret,
-		BaseURL:  u.Hostname(),
+		BaseURL: u.Hostname(),
 	}, nil
 }
 
@@ -77,12 +77,6 @@ func (a *Auth) FromEnv() {
 	}
 	if value, exists := os.LookupEnv("GHCR_PASSWORD"); exists {
 		a.GHCRPassword = value
-	}
-	if value, exists := os.LookupEnv("AWS_ACCESS_KEY_ID"); exists {
-		a.ECRId = value
-	}
-	if value, exists := os.LookupEnv("AWS_SECRET_ACCESS_KEY"); exists {
-		a.ECRSecret = value
 	}
 }
 

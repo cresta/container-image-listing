@@ -9,6 +9,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ecr"
 	"github.com/pkg/errors"
 )
 
@@ -58,6 +63,44 @@ func (c *DockerRegistryClient) parseBearerResponse(body io.ReadCloser) (string, 
 // docker.io also requests specific headers in some instances
 func (c *DockerRegistryClient) isDockerHub() bool {
 	return strings.Contains(c.BaseURL, DockerHubBaseURL)
+}
+
+func (c *DockerRegistryClient) isECR() bool {
+	return strings.Contains(c.BaseURL, ECRBaseURL)
+}
+
+func (c *DockerRegistryClient) getBearerECRSpecific() (token string, err error) {
+	creds := credentials.NewEnvCredentials()
+	config := aws.NewConfig().WithRegion("us-west-2").WithCredentials(creds)
+	sess, err := session.NewSession(config)
+	if err != nil {
+		return "", err
+	}
+	svc := ecr.New(sess)
+
+	input := &ecr.GetAuthorizationTokenInput{}
+
+	result, err := svc.GetAuthorizationToken(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case ecr.ErrCodeServerException:
+				fmt.Println(ecr.ErrCodeServerException, aerr.Error())
+			case ecr.ErrCodeInvalidParameterException:
+				fmt.Println(ecr.ErrCodeInvalidParameterException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
+		return "", err
+	}
+
+	token = *result.AuthorizationData[0].AuthorizationToken
+	return token, nil
 }
 
 // getBearerForRepo - Obtains a bearer token for a specific repository
@@ -110,7 +153,13 @@ func (c *DockerRegistryClient) ListTags(name string) ([]Tag, error) { // TODO ha
 
 func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error) {
 	// Get auth token
-	token, err := c.getBearerForRepo(name)
+	var token string
+	var err error
+	if c.isECR() {
+		token, err = c.getBearerECRSpecific()
+	} else {
+		token, err = c.getBearerForRepo(name)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +178,11 @@ func (c *DockerRegistryClient) listTagsPage(name string, page int) ([]Tag, error
 
 	// Add auth
 	req.Header.Add("Accept", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	authMethod := "Bearer"
+	if c.isECR() {
+		authMethod = "Basic"
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("%s %s", authMethod, token))
 
 	// Perform request
 	client := http.DefaultClient
