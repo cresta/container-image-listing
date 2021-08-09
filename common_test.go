@@ -1,13 +1,12 @@
-package containerimagelisting_test
+package containerimagelisting
 
 import (
 	"testing"
 
-	containerimagelisting "github.com/cresta/container-image-listing"
 	"github.com/stretchr/testify/assert"
 )
 
-func containsTag(name string, tags []containerimagelisting.Tag) bool {
+func containsTag(name string, tags []Tag) bool {
 	for _, tag := range tags {
 		if tag.Name == name {
 			return true
@@ -20,23 +19,24 @@ func TestNewContainerClient(t *testing.T) {
 	tests := []struct {
 		name         string
 		url          string
-		wantedClient containerimagelisting.ContainerClient
+		wantedClient ContainerClient
 	}{
 		// Test Cases
 		{
 			name:         "quay",
-			url:          "quay.io/cresta/chatmon",
-			wantedClient: &containerimagelisting.QuayClient{},
+			url:          "https://quay.io/cresta/chatmon",
+			wantedClient: &QuayClient{},
 		},
 		{
 			name:         "dockerhub",
-			url:          "docker.io", // TODO add better url
-			wantedClient: &containerimagelisting.DockerRegistryClient{},
+			url:          "https://docker.io",
+			wantedClient: &DockerRegistryClient{},
 		},
 	}
 
 	for _, tt := range tests {
-		client := containerimagelisting.NewClientFromEnv(tt.url)
+		client, err := NewClientFromEnv(tt.url)
+		assert.NoError(t, err)
 		assert.IsType(t, tt.wantedClient, client)
 	}
 }

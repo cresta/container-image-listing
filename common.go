@@ -1,27 +1,67 @@
 package containerimagelisting
 
 import (
+	"fmt"
+	"net/url"
 	"os"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type Auth struct {
 	QuayBearerToken   string
 	DockerHubUsername string
 	DockerHubPassword string
-	ECRToken          string // TODO fix this to make sense, this is a placeholder
 	GHCRUsername      string
 	GHCRPassword      string
+	ECRId             string
+	ECRSecret         string
 }
 
 type ContainerClient interface {
 	ListTags(name string) ([]Tag, error)
 }
 
-func (a *Auth) NewClient(url string) ContainerClient {
+func (a *Auth) NewQuayClient() ContainerClient {
+	return &QuayClient{
+		Token: a.QuayBearerToken,
+	}
+}
+
+func (a *Auth) NewDockerHubClient() ContainerClient {
+	return &DockerRegistryClient{
+		Username: a.DockerHubUsername,
+		Password: a.DockerHubPassword,
+		BaseURL:  DockerHubBaseURL,
+	}
+}
+
+func (a *Auth) NewGHCRClient() ContainerClient {
+	return &DockerRegistryClient{
+		Username: a.GHCRUsername,
+		Password: a.GHCRPassword,
+		BaseURL:  GHCRBaseURL,
+	}
+}
+
+func (a *Auth) NewECRClient(imageURL string) (ContainerClient, error) {
+	u, err := url.Parse(imageURL)
+	if err != nil {
+		return nil, err
+	}
+	return &DockerRegistryClient{
+		Username: a.ECRId,
+		Password: a.ECRSecret,
+		BaseURL:  u.Hostname(),
+	}, nil
+}
+
+func (a *Auth) NewClient(url string) (ContainerClient, error) {
 	return NewClient(url, a)
 }
 
+// FromEnv - Populates Auth with values from the environment.
 func (a *Auth) FromEnv() {
 	if value, exists := os.LookupEnv("QUAY_TOKEN"); exists {
 		a.QuayBearerToken = value
@@ -38,39 +78,44 @@ func (a *Auth) FromEnv() {
 	if value, exists := os.LookupEnv("GHCR_PASSWORD"); exists {
 		a.GHCRPassword = value
 	}
-	// TODO finish this once everything is coded
+	if value, exists := os.LookupEnv("AWS_ACCESS_KEY_ID"); exists {
+		a.ECRId = value
+	}
+	if value, exists := os.LookupEnv("AWS_SECRET_ACCESS_KEY"); exists {
+		a.ECRSecret = value
+	}
 }
 
 // NewClientFromEnv - Creates a new ContainerClient checking
-// ENV variables for authorization
-// QUAY_TOKEN
-// TODO add the other env variables once those are coded
-func NewClientFromEnv(url string) ContainerClient {
+// ENV variables for authorization.
+// See Auth.FromEnv() for a complete list.
+func NewClientFromEnv(url string) (ContainerClient, error) {
 	auth := &Auth{}
 	auth.FromEnv()
 
 	return NewClient(url, auth)
 }
 
-func NewClient(url string, auth *Auth) ContainerClient {
-	var containerClient ContainerClient
+func NewClient(url string, auth *Auth) (ContainerClient, error) {
 	switch {
-	case strings.Contains(url, "quay.io"):
-		containerClient = &QuayClient{Token: auth.QuayBearerToken}
-	default:
-		containerClient = &DockerRegistryClient{
-			Username: auth.DockerHubUsername,
-			Password: auth.DockerHubPassword,
-			BaseURL:  DockerHubBaseUrl,
+	case strings.Contains(url, QuayBaseURL):
+		return auth.NewQuayClient(), nil
+	case strings.Contains(url, ECRBaseURL):
+		containerClient, err := auth.NewECRClient(url)
+		if err != nil {
+			return nil, err
 		}
-		//case strings.Contains(url, "amazon.com"):
-		//	return nil, nil // TODO fill this out
+		return containerClient, nil
+	case strings.Contains(url, "docker"): // Need to catch hub.docker.com and docker.io
+		return auth.NewDockerHubClient(), nil
+	case strings.Contains(url, GHCRBaseURL):
+		return auth.NewGHCRClient(), nil
 	}
 
-	return containerClient
+	return nil, errors.New(fmt.Sprintf("No clients matched for url %s", url))
 }
 
-// stringNamesToTags - Converts a slice of strings to a slice of Tags
+// stringNamesToTags - Converts a slice of strings to a slice of Tags.
 func stringNamesToTags(names []string) []Tag {
 	var tags []Tag
 	for _, name := range names {
@@ -78,4 +123,15 @@ func stringNamesToTags(names []string) []Tag {
 	}
 
 	return tags
+}
+
+// ListTags - Wrapper function to create a new client and list tags in one step.
+// TODO make a single function that gets a new client and grabs tags in one step?
+func ListTags(url string) ([]Tag, error) {
+	client, err := NewClientFromEnv(url)
+	if err != nil {
+		return nil, err
+	}
+	client.ListTags("") // TODO still need to parse out the "name" from the url before this is usable
+	return nil, errors.New("code this")
 }

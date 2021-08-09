@@ -16,6 +16,7 @@ type QuayClient struct {
 
 var _ ContainerClient = &QuayClient{}
 
+const QuayBaseURL = "quay.io"
 const QuayMaxPageSize = 100
 
 type Tag struct {
@@ -55,7 +56,7 @@ func (c *QuayClient) parseListTagResult(body io.ReadCloser) (tags []Tag, additio
 // Should typically start with page 0
 func (c *QuayClient) listTagsPaging(name string, page int) ([]Tag, error) {
 	// Create URL
-	url := fmt.Sprintf("https://quay.io/api/v1/repository/%s/tag/", name) // NOTE: Fails without trailing slash
+	url := fmt.Sprintf("https://%s/api/v1/repository/%s/tag/", QuayBaseURL, name) // NOTE: Fails without trailing slash
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {

@@ -17,8 +17,9 @@ import (
 // TODO wrap errors from external librarys
 
 const DockerHubMaxPageSize = 10 // TODO temporarily setting this to 10 for testing
-const DockerHubBaseUrl = "docker.io"
-const GHCRBaseUrl = "ghcr.io"
+const DockerHubBaseURL = "docker.io"
+const GHCRBaseURL = "ghcr.io"
+const ECRBaseURL = "amazonaws.com"
 
 type DockerRegistryClient struct {
 	Username string
@@ -52,11 +53,16 @@ func (c *DockerRegistryClient) parseBearerResponse(body io.ReadCloser) (string, 
 	return ar.Token, nil
 }
 
+// isDockerHub - Helper function for quickly determining if something is docker.io
+// docker.io uses different base URLs depending on the operation
+// docker.io also requests specific headers in some instances
 func (c *DockerRegistryClient) isDockerHub() bool {
-	return strings.Contains(c.BaseURL, "docker.io")
+	return strings.Contains(c.BaseURL, DockerHubBaseURL)
 }
 
-func (c *DockerRegistryClient) getBearerForRepo(name string) (string, error) {
+// getBearerForRepo - Obtains a bearer token for a specific repository
+// This is necessary because bearer tokens must be scoped for specific repositories
+func (c *DockerRegistryClient) getBearerForRepo(name string) (token string, err error) {
 	baseUrl := c.BaseURL
 	if c.isDockerHub() {
 		baseUrl = "auth.docker.io"
@@ -88,7 +94,7 @@ func (c *DockerRegistryClient) getBearerForRepo(name string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	token, err := c.parseBearerResponse(resp.Body)
+	token, err = c.parseBearerResponse(resp.Body)
 	if err != nil {
 		return "", err
 	}

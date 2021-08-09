@@ -1,17 +1,16 @@
-package containerimagelisting_test
+package containerimagelisting
 
 import (
 	"testing"
 
-	"github.com/cresta/container-image-listing"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDockerClient_ListTags_NoAuth(t *testing.T) {
+func TestDockerHub_ListTags_NoAuth(t *testing.T) {
 	t.Parallel()
 
-	auth := &containerimagelisting.Auth{}
-	dockerClient := containerimagelisting.NewClient("docker.io", auth)
+	auth := &Auth{}
+	dockerClient := auth.NewDockerHubClient()
 
 	tags, err := dockerClient.ListTags("library/redis")
 	assert.NoError(t, err)
@@ -27,10 +26,10 @@ func TestDockerClient_ListTags_NoAuth(t *testing.T) {
 	assert.True(t, containsTag("latest", tags))
 }
 
-func TestDockerClient_ListTags_WithAuth(t *testing.T) {
+func TestDockerHub_ListTags_WithAuth(t *testing.T) {
 	t.Parallel()
 
-	auth := &containerimagelisting.Auth{}
+	auth := &Auth{}
 	auth.FromEnv()
 
 	if !assert.NotEmpty(t, auth.DockerHubUsername, "Make sure DOCKERHUB_USERNAME env variable is set for testing") {
@@ -40,7 +39,7 @@ func TestDockerClient_ListTags_WithAuth(t *testing.T) {
 		t.FailNow()
 	}
 
-	dockerClient := containerimagelisting.NewClient("docker.io", auth)
+	dockerClient := auth.NewDockerHubClient()
 
 	// Test private repo with access token
 	tags, err := dockerClient.ListTags("crestaai/build-cache")
