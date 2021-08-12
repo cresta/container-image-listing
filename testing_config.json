@@ -1,0 +1,21 @@
+{
+  "GhcrTests": [
+    {
+      "Repository": "homebrew/brew",
+      "ExpectedTags": ["2.5.0"]
+    }
+  ],
+  "DockerhubTests": [
+    {
+      "Repository": "ubuntu/redis",
+      "ExpectedTags": ["edge"]
+    }
+  ],
+  "QuayToken": "",
+  "QuayTests": [
+    {
+      "Repository": "bedrock/ubuntu",
+      "ExpectedTags": ["saucy"]
+    }
+  ]
+}
