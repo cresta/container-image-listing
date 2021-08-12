@@ -9,8 +9,9 @@ import (
 	"net/http"
 )
 
+// DockerV2 is a registry API for registries that implement the Docker v2 registry API.
 type DockerV2 struct {
-	BaseURL string
+	BaseURL           string
 	Client            *http.Client
 	ReAuth            *ScopeReauther
 	RequestWrapper    RequestWrapper

@@ -43,6 +43,8 @@ func parseWwwAuthenticate(requiredScope string) *authRequest {
 	return &ret
 }
 
+// ScopeReauther uses the dockerhubv2 auth API to execute another request for a token when an initial request fails
+// due to a 4xx issues.
 type ScopeReauther struct {
 	Username string
 	Password string
@@ -64,6 +66,7 @@ func (a *authResponse) tokenToUse() string {
 	return a.AccessToken
 }
 
+// RequestWrapper is any type that can wrap a request before it is executed
 type RequestWrapper interface {
 	Wrap(request *http.Request) error
 }
@@ -76,6 +79,8 @@ func (r RequestWrapperFunc) Wrap(request *http.Request) error {
 
 var _ RequestWrapper = RequestWrapperFunc(nil)
 
+// CheckForReauth returns a RequestWrapper for a response if the response is asking for authentication.  The returned
+// RequestWrapper will usually set authorization headers
 func (s *ScopeReauther) CheckForReauth(ctx context.Context, originalResp *http.Response, client *http.Client) (RequestWrapper, error) {
 	// A need to auth should be inside the 4xx status code range
 	if originalResp.StatusCode < 400 || originalResp.StatusCode > 499 {

@@ -12,17 +12,20 @@ import (
 	"github.com/aws/aws-sdk-go/service/ecr"
 )
 
+// ECRClient should connect to AWS's ECR for Docker tokens
 type ECRClient interface {
+	// GetAuthorizationTokenWithContext should emulate aws-sdk-go's ECR.GetAuthorizationTokenWithContext function
 	GetAuthorizationTokenWithContext(ctx aws.Context, input *ecr.GetAuthorizationTokenInput, opts ...request.Option) (*ecr.GetAuthorizationTokenOutput, error)
 }
 
 var _ ECRClient = &ecr.ECR{}
 
+// ECRAuthWrapper can wrap http.Request with the ECR Docker authentication token
 type ECRAuthWrapper struct {
-	ECR            ECRClient
-	AuthBufferTime time.Duration
+	ECR                     ECRClient
+	AuthBufferTime          time.Duration
 	cachedAuthorizationData *ecr.AuthorizationData
-	mu sync.Mutex
+	mu                      sync.Mutex
 }
 
 func (a *ECRAuthWrapper) authBufferTime() time.Duration {
@@ -34,6 +37,7 @@ func (a *ECRAuthWrapper) authBufferTime() time.Duration {
 
 var _ RequestWrapper = &ECRAuthWrapper{}
 
+// Wrap a http.Request with the docker token.  If the token is unknown or expired, will fetch it before wrapping.
 func (a *ECRAuthWrapper) Wrap(request *http.Request) error {
 	token, err := a.FetchToken(request.Context())
 	if err != nil {
@@ -43,6 +47,8 @@ func (a *ECRAuthWrapper) Wrap(request *http.Request) error {
 	return nil
 }
 
+// FetchToken returns the ECR docker token.  It's possible to call this before using ECRAuthWrapper to verify
+// you are able to fetch a token.
 func (a *ECRAuthWrapper) FetchToken(ctx context.Context) (string, error) {
 	a.mu.Lock()
 	defer a.mu.Unlock()

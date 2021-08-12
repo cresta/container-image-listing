@@ -8,11 +8,12 @@ import (
 	"net/http"
 )
 
+// Quay implements quay's API in order to fetch docker image tags
 type Quay struct {
-	Token string
+	Token       string
 	BaseURL     string
 	MaxPageSize int
-	Client *http.Client
+	Client      *http.Client
 }
 
 func (q *Quay) baseURL() string {
@@ -31,6 +32,7 @@ func (q *Quay) maxPageSize() int {
 
 var _ Registry = &Quay{}
 
+// QuayTag implements the Tag type and also returns extra information quay tags know
 type QuayTag struct {
 	Name           string `json:"name"`
 	Reversion      bool   `json:"reversion"`
@@ -62,6 +64,7 @@ func (q *Quay) parseListTagResult(body io.Reader) (tags []QuayTag, additionalPag
 	return ltr.Tags, ltr.HasAdditional, nil
 }
 
+// ListTags returns all quay image tags for a repository
 func (q *Quay) ListTags(ctx context.Context, repository string) ([]Tag, error) {
 	var ret []Tag
 	hasMorePages := true

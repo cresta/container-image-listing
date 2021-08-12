@@ -5,16 +5,20 @@ import (
 	"strings"
 )
 
+// RepositoryLocator should return a non empty string of the repository for a URL.  For example,
+// ghcr.io/a/b would return 'a/b' for the ghcr repository
 type RepositoryLocator interface {
 	RepositoryForURL(url string) string
 }
 
+// URLMatchFunc is a function wrapper for RepositoryLocator
 type URLMatchFunc func(url string) string
 
 func (U URLMatchFunc) RepositoryForURL(url string) string {
 	return U(url)
 }
 
+// MultiURLHostMatcher contains multiple ways to match a URL with a repository
 type MultiURLHostMatcher struct {
 	ValidDomains          []string
 	ValidDomainSubstrings []string
@@ -58,6 +62,8 @@ func (m *MultiURLHostMatcher) RepositoryForURL(repo string) string {
 
 var _ RepositoryLocator = URLMatchFunc(nil)
 
+// DockerHubLocator helps match dockerhub repositories since it assumes the first part of the / split path is dockerhub
+// if it does not contain a '.'
 type DockerHubLocator struct {
 	MultiURLHostMatcher MultiURLHostMatcher
 }
