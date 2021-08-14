@@ -20,4 +20,4 @@ jobs:
         uses: magefile/mage-action@v1
         with:
           version: latest
-          args: go:test
+          args: go:test go:lint

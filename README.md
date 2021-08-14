@@ -1,5 +1,5 @@
 # containerimagelisting
-Library for listing difference attributes of images.
+Library for listing image tags given a docker image location.
 
 ## Problem
 
@@ -19,7 +19,7 @@ finder := RegistryFinder{
         ForGHCR(cfg.GhcrUsername, cfg.GhcrPassword, opts),
         ForDockerhub(cfg.DockerhubUsername, cfg.DockerhubPassword, opts),
         ForQuay(cfg.QuayToken, opts),
-        ForECR(ecr.New(ses), cfg.ECRBaseURL, opts),
+        ForECR(ecr.New(sessionObject), cfg.ECRBaseURL, opts),
     },
 }
 
@@ -32,4 +32,4 @@ finder.ListTags("ubuntu/redis")
 
 ## Local Testing
 
-To test locally, run `mage go:test`
+To test locally, run `mage go:test go:lint`
